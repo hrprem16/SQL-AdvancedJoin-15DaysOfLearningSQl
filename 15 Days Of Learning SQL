@@ -1,0 +1,33 @@
+/*
+Enter your query here.
+Please append a semicolon ";" at the end of the query and enter your query in a single line to avoid error.
+*/
+with a as (
+  select distinct hacker_id, submission_date from submissions
+), b as (
+  select hacker_id, submission_date, count(*) over (partition by hacker_id order by submission_date rows UNBOUNDED PRECEDING) cc
+    from a
+     
+) , c as (
+  select * from b
+  where day(submission_date) = cc 
+) , p1 as (
+select c.submission_date, count(*) cc 
+    from c
+  group by c.submission_date
+), d as (
+  select s.hacker_id, s.submission_date, count(*) num_sub
+  from submissions s 
+  /* join c on c.submission_date=s.submission_date and c.hacker_id=s.hacker_id */
+  group by s.hacker_id, s.submission_date
+) , p2 as (
+  select distinct submission_date, first_value(hacker_id) over (partition by submission_date order by num_sub desc, hacker_id) fv
+  from d
+), f as (
+  select p1.submission_date, cc, fv, name
+  from p1
+  join p2 on p1.submission_date=p2.submission_date
+  join hackers h on h.hacker_id=p2.fv
+)
+select submission_date, cc, fv, name from f
+    order by  submission_date
